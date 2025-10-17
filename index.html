@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Converter Pro (No-FFmpeg)</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- App Styles and Customizations -->
+    <style>
+        :root {
+            --background: 222 47% 11%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 18%;
+            --card-foreground: 210 40% 98%;
+            --popover: 222 47% 11%;
+            --popover-foreground: 210 40% 98%;
+            --primary: 210 40% 98%;
+            --primary-foreground: 222 47% 11%;
+            --secondary: 222 47% 25%;
+            --secondary-foreground: 210 40% 98%;
+            --muted: 222 47% 25%;
+            --muted-foreground: 222 47% 60%;
+            --accent: 222 47% 25%;
+            --accent-foreground: 210 40% 98%;
+            --destructive: 0 63% 31%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 222 47% 25%;
+            --input: 222 47% 25%;
+            --ring: 210 40% 98%;
+        }
+
+        html:not(.dark) {
+            --background: 0 0% 100%;
+            --foreground: 240 10% 3.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 240 10% 3.9%;
+            --popover: 0 0% 100%;
+            --popover-foreground: 240 10% 3.9%;
+            --primary: 240 5.9% 10%;
+            --primary-foreground: 0 0% 98%;
+            --secondary: 240 4.8% 95.9%;
+            --secondary-foreground: 240 5.9% 10%;
+            --muted: 240 4.8% 95.9%;
+            --muted-foreground: 240 3.8% 46.1%;
+            --accent: 240 4.8% 95.9%;
+            --accent-foreground: 240 5.9% 10%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 0 0% 98%;
+            --border: 240 5.9% 90%;
+            --input: 240 5.9% 90%;
+            --ring: 240 5.9% 10%;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+
+        .sidebar-icon {
+            transition: all 0.2s ease-in-out;
+        }
+        .sidebar-icon:hover {
+            background-color: hsl(var(--accent));
+            transform: scale(1.1);
+        }
+        .sidebar-icon.active {
+            background-color: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+        
+        .progress-bar-inner {
+            transition: width 0.3s ease-in-out;
+        }
+        
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(20px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        @keyframes toast-out {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(20px) scale(0.9); }
+        }
+
+        .toast { animation: toast-in 0.3s ease-out forwards; }
+        .toast.toast-hiding { animation: toast-out 0.3s ease-in forwards; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: hsl(var(--secondary)); }
+        ::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground)); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: hsl(var(--accent-foreground)); }
+        
+        .custom-input, .custom-select {
+            background-color: hsl(var(--input));
+            border: 1px solid hsl(var(--border));
+            color: hsl(var(--foreground));
+        }
+        .custom-input:focus, .custom-select:focus {
+            outline: 2px solid hsl(var(--ring));
+            outline-offset: 2px;
+        }
+        
+        .dropzone-active {
+            border-color: hsl(var(--primary));
+            background-color: hsl(var(--accent));
+        }
+        
+        [data-tooltip] { position: relative; cursor: pointer; }
+        [data-tooltip]:before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: hsl(var(--popover));
+            color: hsl(var(--popover-foreground));
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 10;
+        }
+        [data-tooltip]:hover:before { opacity: 1; visibility: visible; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: hsl(var(--muted)); transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: hsl(var(--primary)); }
+        input:checked + .slider:before { transform: translateX(14px); }
+        
+        /* Prose for summary */
+        .prose p { margin-bottom: 1em; }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+    <div id="app" class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-20 bg-card border-r border-border flex flex-col items-center py-6 space-y-6">
+            <div class="flex items-center justify-center text-primary">
+                <i data-lucide="blender" class="w-8 h-8"></i>
+            </div>
+            <nav id="category-nav" class="flex flex-col items-center space-y-4">
+                <button data-category="image" class="sidebar-icon p-3 rounded-xl" data-tooltip="Conversor de Imagem"><i data-lucide="image" class="w-6 h-6"></i></button>
+                <button data-category="video" class="sidebar-icon p-3 rounded-xl" data-tooltip="Conversor de Vídeo"><i data-lucide="video" class="w-6 h-6"></i></button>
+                <button data-category="audio" class="sidebar-icon p-3 rounded-xl" data-tooltip="Conversor de Áudio"><i data-lucide="music" class="w-6 h-6"></i></button>
+                <button data-category="document" class="sidebar-icon p-3 rounded-xl" data-tooltip="Conversor de Documentos"><i data-lucide="file-text" class="w-6 h-6"></i></button>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col bg-background overflow-hidden">
+            <!-- Header -->
+            <header class="flex-shrink-0 bg-card border-b border-border p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-xl font-bold text-foreground">Universal Converter Pro</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                     <div class="flex items-center space-x-2" data-tooltip="Processar até 2 arquivos em paralelo. Pode consumir mais CPU/RAM.">
+                        <label for="parallel-toggle" class="text-sm font-medium text-muted-foreground">Paralelo</label>
+                        <label class="switch">
+                            <input type="checkbox" id="parallel-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <button id="theme-toggle" class="p-2 rounded-lg hover:bg-accent" data-tooltip="Alterar Tema">
+                        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i><i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                    </button>
+                    <button id="clear-queue-btn" class="p-2 rounded-lg hover:bg-accent" data-tooltip="Limpar Fila"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    <button id="download-zip-btn" class="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="archive" class="w-4 h-4"></i><span>Baixar ZIP</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main work area -->
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                <!-- Left Panel: Dropzone & Settings -->
+                <div class="w-full md:w-1/3 border-r border-border p-6 flex flex-col overflow-y-auto">
+                    <div id="dropzone" class="border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-primary transition-colors mb-6">
+                        <div class="flex flex-col items-center text-muted-foreground">
+                            <i data-lucide="upload-cloud" class="w-16 h-16 mb-4"></i>
+                            <p class="font-semibold">Arraste e solte arquivos aqui</p>
+                            <p class="text-sm">ou clique para selecionar</p>
+                            <input type="file" id="file-input" multiple class="hidden">
+                        </div>
+                    </div>
+
+                    <div id="settings-panel">
+                        <h2 class="text-lg font-semibold mb-4 text-foreground">Configurações de Conversão</h2>
+                        <div class="space-y-4">
+                            <div id="presets-container"></div>
+                            <div>
+                                <label for="output-format" class="block text-sm font-medium text-muted-foreground mb-1">Formato de Saída</label>
+                                <select id="output-format" class="custom-select w-full p-2 rounded-lg text-sm"></select>
+                            </div>
+                            <div id="dynamic-options" class="space-y-4 border-t border-border pt-4 mt-4"></div>
+                        </div>
+                        <button id="convert-all-btn" class="w-full mt-6 bg-primary text-primary-foreground py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:opacity-90 transition-opacity disabled:opacity-50">
+                            <i data-lucide="play" class="w-5 h-5"></i><span>Converter Tudo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel: File Queue -->
+                <div class="flex-1 p-6 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between mb-4">
+                         <h2 class="text-lg font-semibold text-foreground">Fila de Conversão</h2>
+                         <div id="queue-summary" class="text-sm text-muted-foreground">0 arquivos</div>
+                    </div>
+                    <div id="file-queue" class="flex-1 overflow-y-auto space-y-3 pr-2">
+                        <div id="empty-queue" class="flex flex-col items-center justify-center h-full text-muted-foreground">
+                            <i data-lucide="files" class="w-24 h-24 mb-4"></i>
+                            <p class="text-lg font-medium">A sua fila está vazia</p>
+                            <p class="text-sm">Adicione arquivos para começar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 items-end"></div>
+
+    <!-- File Card Template -->
+    <template id="file-card-template">
+        <div class="file-card bg-card border border-border rounded-2xl p-4 flex items-center space-x-4 shadow-sm transition-all">
+            <div class="flex-shrink-0 w-16 h-16 bg-secondary rounded-lg flex items-center justify-center">
+                <i class="icon w-8 h-8 text-muted-foreground"></i>
+                <img class="thumbnail w-full h-full object-cover rounded-lg hidden" alt="File thumbnail">
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="file-name font-semibold text-foreground truncate" title=""></p>
+                <p class="file-info text-sm text-muted-foreground"></p>
+                <div class="progress-container mt-2 w-full bg-secondary rounded-full h-2.5 overflow-hidden hidden">
+                    <div class="progress-bar-inner bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="status-text text-sm font-medium mt-1 hidden"></p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button class="summary-btn p-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 hidden" data-tooltip="Ver Resumo">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </button>
+                 <button class="cancel-btn p-2 rounded-lg hover:bg-yellow-500 hover:text-black hidden" data-tooltip="Cancelar">
+                    <i data-lucide="stop-circle" class="w-5 h-5"></i>
+                </button>
+                <button class="remove-btn p-2 rounded-lg hover:bg-destructive hover:text-destructive-foreground" data-tooltip="Remover">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+                <a href="#" class="download-btn p-2 rounded-lg bg-green-500 text-white hover:bg-green-600 hidden" data-tooltip="Download" download>
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Gemini Summary Modal -->
+    <div id="summary-modal" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center p-4">
+        <div class="bg-card rounded-2xl shadow-lg max-w-2xl w-full m-4 flex flex-col">
+            <div class="p-6 border-b border-border flex justify-between items-center flex-shrink-0">
+                <h3 id="summary-modal-title" class="text-lg font-semibold flex items-center gap-2"><i data-lucide="sparkles"></i>Resumo Gerado por IA</h3>
+                <button id="close-summary-modal" class="p-2 rounded-lg hover:bg-accent"><i data-lucide="x"></i></button>
+            </div>
+            <div id="summary-content" class="p-6 max-h-[60vh] overflow-y-auto text-card-foreground/90 prose">
+                <!-- Summary will be injected here -->
+            </div>
+            <div class="p-4 bg-secondary/50 rounded-b-2xl text-xs text-muted-foreground text-center mt-auto flex-shrink-0">
+                Gerado com a API do Google Gemini.
+            </div>
+        </div>
+    </div>
+    
+    <!-- JS Libraries (No-FFmpeg version) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/9.0.1/pica.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/webm-writer@2.0.0/dist/webm-writer.umd.js"></script>
+    <script src="https://jnordberg.github.io/gif.js/dist/gif.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;</script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    
+    <!-- Main Application Logic -->
+    <script type="module">
+        const { PDFDocument } = PDFLib;
+        const WebMWriter = window.WebMWriter;
+
+        const el = (selector) => document.querySelector(selector);
+        
+        // --- State Management ---
+        let state = {
+            theme: 'dark',
+            queue: [],
+            presets: {
+                image: [
+                    { name: 'Padrão Web (JPEG)', options: { format: 'jpeg', quality: 85, resize: true, width: 1920, height: 1080, keepAspectRatio: true }},
+                    { name: 'Alta Qualidade (PNG)', options: { format: 'png', quality: 100, resize: false }},
+                ],
+                video: [
+                    { name: 'Web (WEBM 720p)', options: { format: 'webm', resolution: '720p', fps: 24 }},
+                    { name: 'Animado (GIF 480p)', options: { format: 'gif', resolution: '480p', fps: 15 }},
+                ],
+                audio: [
+                    { name: 'Padrão (MP3 192k)', options: { format: 'mp3', bitrate: 192, sampleRate: 44100 }},
+                    { name: 'Qualidade CD (WAV)', options: { format: 'wav', sampleRate: 44100 }},
+                ],
+                document: []
+            },
+            currentCategory: 'image',
+            abortControllers: {},
+            activeConversions: 0,
+        };
+
+        const formatOptions = {
+            image: [
+                { value: 'png', text: 'PNG' }, { value: 'jpeg', text: 'JPEG' }, { value: 'webp', text: 'WEBP' }, { value: 'avif', text: 'AVIF' }, { value: 'pdf', text: 'PDF' }
+            ],
+            video: [
+                { value: 'webm', text: 'WEBM (VP8)' }, { value: 'gif', text: 'GIF Animado' },
+            ],
+            audio: [
+                { value: 'mp3', text: 'MP3' }, { value: 'wav', text: 'WAV' },
+            ],
+            document: [
+                { value: 'pdf', text: 'PDF (Mesclar/Converter)' }, { value: 'txt', text: 'Extrair Texto (TXT)' }, { value: 'images-zip', text: 'Exportar Páginas (ZIP de PNGs)' },
+            ]
+        };
+        
+        const defaultOptions = {
+            image: { quality: 85, resize: false, width: 1920, height: 1080, keepAspectRatio: true, originalWidth: 1920, originalHeight: 1080 },
+            video: { resolution: '720p', fps: 24, trim: false, startTime: 0, endTime: 10 },
+            audio: { bitrate: 192, sampleRate: 44100, channels: 'stereo', trim: false, startTime: 0, endTime: 30 },
+            document: { pageRange: '', ocr: false, ocrLang: 'por', summarize: false }
+        };
+
+        // --- UI Functions ---
+        const ui = {
+            renderQueue: () => {
+                const queueEl = el('#file-queue');
+                queueEl.innerHTML = ''; // Clear the container
+                
+                if (state.queue.length === 0) {
+                    // If queue is empty, add back the placeholder message
+                    queueEl.innerHTML = `
+                        <div id="empty-queue" class="flex flex-col items-center justify-center h-full text-muted-foreground">
+                            <i data-lucide="files" class="w-24 h-24 mb-4"></i>
+                            <p class="text-lg font-medium">A sua fila está vazia</p>
+                            <p class="text-sm">Adicione arquivos para começar</p>
+                        </div>
+                    `;
+                    lucide.createIcons(); // Re-initialize icons
+                } else {
+                    // If queue has items, render them
+                    state.queue.forEach(fileData => {
+                        const card = ui.createFileCard(fileData);
+                        queueEl.appendChild(card);
+                    });
+                }
+                ui.updateQueueSummary();
+                ui.updateConvertAllButton();
+                ui.updateDownloadZipButton();
+            },
+            
+            createFileCard: (fileData) => {
+                const template = el('#file-card-template');
+                const clone = template.content.cloneNode(true);
+                const card = clone.querySelector('.file-card');
+                
+                card.dataset.id = fileData.id;
+                card.querySelector('.file-name').textContent = fileData.name;
+                card.querySelector('.file-name').title = fileData.name;
+                card.querySelector('.file-info').textContent = `${(fileData.size / 1024 / 1024).toFixed(2)} MB`;
+                
+                const iconEl = card.querySelector('.icon');
+                const thumbEl = card.querySelector('.thumbnail');
+
+                if (fileData.thumbnailUrl) {
+                    thumbEl.src = fileData.thumbnailUrl;
+                    iconEl.classList.add('hidden');
+                    thumbEl.classList.remove('hidden');
+                } else {
+                    const iconMap = { image: 'image', video: 'video', audio: 'music', document: 'file-text' };
+                    iconEl.setAttribute('data-lucide', iconMap[fileData.category] || 'file');
+                }
+                
+                ui.updateFileCardStatus(card, fileData);
+                return card;
+            },
+
+            updateFileCardStatus: (cardOrId, fileData) => {
+                const card = typeof cardOrId === 'string' ? el(`.file-card[data-id="${cardOrId}"]`) : cardOrId;
+                if (!card) return;
+
+                const progressContainer = card.querySelector('.progress-container');
+                const progressBar = card.querySelector('.progress-bar-inner');
+                const statusText = card.querySelector('.status-text');
+                const downloadBtn = card.querySelector('.download-btn');
+                const cancelBtn = card.querySelector('.cancel-btn');
+                const summaryBtn = card.querySelector('.summary-btn');
+
+                [progressContainer, statusText, downloadBtn, cancelBtn, summaryBtn].forEach(el => el.classList.add('hidden'));
+                statusText.classList.remove('text-green-500', 'text-red-500', 'text-yellow-500');
+
+                switch (fileData.status) {
+                    case 'queued':
+                        statusText.textContent = 'Na fila';
+                        statusText.classList.add('text-muted-foreground');
+                        statusText.classList.remove('hidden');
+                        break;
+                    case 'processing':
+                        statusText.textContent = `Processando... ${(fileData.progress * 100).toFixed(0)}%`;
+                        statusText.classList.remove('hidden');
+                        progressContainer.classList.remove('hidden');
+                        progressBar.style.width = `${fileData.progress * 100}%`;
+                        cancelBtn.classList.remove('hidden');
+                        break;
+                    case 'done':
+                        statusText.textContent = 'Concluído!';
+                        statusText.classList.add('text-green-500');
+                        statusText.classList.remove('hidden');
+                        downloadBtn.href = fileData.resultUrl;
+                        downloadBtn.download = fileData.resultName;
+                        downloadBtn.classList.remove('hidden');
+                        if (fileData.summaryText) {
+                           summaryBtn.classList.remove('hidden');
+                        }
+                        break;
+                    case 'error':
+                        statusText.textContent = `Erro: ${fileData.error || 'Falha na conversão'}`;
+                        statusText.classList.add('text-red-500');
+                        statusText.classList.remove('hidden');
+                        break;
+                    case 'canceled':
+                        statusText.textContent = 'Cancelado';
+                        statusText.classList.add('text-yellow-500');
+                        statusText.classList.remove('hidden');
+                        break;
+                }
+            },
+            
+            updateQueueSummary: () => { el('#queue-summary').textContent = `${state.queue.length} arquivo(s)`; },
+
+            updateConvertAllButton: () => {
+                const btn = el('#convert-all-btn');
+                const hasQueuedFiles = state.queue.some(f => f.status === 'queued');
+                btn.disabled = !hasQueuedFiles || state.activeConversions > 0;
+                btn.querySelector('span').textContent = state.activeConversions > 0 ? 'Processando...' : 'Converter Tudo';
+            },
+
+            updateDownloadZipButton: () => { el('#download-zip-btn').disabled = !state.queue.some(f => f.status === 'done'); },
+            
+            showToast: (message, type = 'info', duration = 3000) => {
+                const container = el('#toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast flex items-center space-x-3 p-4 rounded-2xl shadow-lg max-w-sm`;
+                const colors = { info: 'bg-blue-500 text-white', success: 'bg-green-500 text-white', error: 'bg-red-500 text-white', warning: 'bg-yellow-500 text-black' };
+                toast.classList.add(...(colors[type] || colors.info).split(' '));
+                const icons = { info: 'info', success: 'check-circle', error: 'alert-triangle', warning: 'alert-octagon' };
+                toast.innerHTML = `<i data-lucide="${icons[type]}" class="w-5 h-5"></i><span class="text-sm font-medium">${message}</span>`;
+                container.appendChild(toast);
+                lucide.createIcons();
+                setTimeout(() => {
+                    toast.classList.add('toast-hiding');
+                    toast.addEventListener('animationend', () => toast.remove());
+                }, duration);
+            },
+
+            updateCategorySelection: (category) => {
+                state.currentCategory = category;
+                document.querySelectorAll('#category-nav button').forEach(btn => btn.classList.toggle('active', btn.dataset.category === category));
+                const select = el('#output-format');
+                select.innerHTML = '';
+                formatOptions[category].forEach(opt => select.add(new Option(opt.text, opt.value)));
+                ui.renderPresets(category);
+                ui.renderDynamicOptions(category);
+                saveState();
+            },
+            
+            renderPresets: (category) => {
+                const container = el('#presets-container');
+                container.innerHTML = '';
+                if(state.presets[category]?.length > 0) {
+                    container.innerHTML = `
+                        <div>
+                            <label for="preset-select" class="block text-sm font-medium text-muted-foreground mb-1">Presets</label>
+                            <select id="preset-select" class="custom-select w-full p-2 rounded-lg text-sm">
+                                <option value="">Configurações Manuais</option>
+                                ${state.presets[category].map((p, i) => `<option value="${i}">${p.name}</option>`).join('')}
+                            </select>
+                        </div>`;
+                }
+            },
+
+            renderDynamicOptions: (category, presetOptions = {}) => {
+                const container = el('#dynamic-options');
+                container.innerHTML = '';
+                const options = { ...defaultOptions[category], ...presetOptions };
+                switch (category) {
+                    case 'image':
+                        container.innerHTML = `
+                            <div>
+                                <label class="block text-sm font-medium text-muted-foreground mb-1">Qualidade: <span id="quality-label">${options.quality}</span></label>
+                                <input type="range" id="image-quality" min="1" max="100" value="${options.quality}" class="w-full">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="image-resize" ${options.resize ? 'checked' : ''} class="custom-input rounded">
+                                <label for="image-resize">Redimensionar</label>
+                            </div>
+                            <div id="resize-options" class="${options.resize ? '' : 'hidden'} space-y-2">
+                                <div class="grid grid-cols-2 gap-2 items-center">
+                                    <input type="number" id="image-width" value="${options.width}" placeholder="Largura" class="custom-input p-2 rounded-lg text-sm w-full">
+                                    <input type="number" id="image-height" value="${options.height}" placeholder="Altura" class="custom-input p-2 rounded-lg text-sm w-full">
+                                </div>
+                            </div>`;
+                        break;
+                    case 'video':
+                        container.innerHTML = `
+                            <div class="bg-yellow-900/50 border border-yellow-700 text-yellow-300 text-xs rounded-lg p-3 mb-4">
+                                <strong>Aviso:</strong> A conversão de vídeo é feita sem áudio. Formato MP4 não é suportado para saída, use WEBM.
+                            </div>
+                            <div>
+                                <label for="video-resolution" class="block text-sm font-medium text-muted-foreground mb-1">Resolução</label>
+                                <select id="video-resolution" class="custom-select w-full p-2 rounded-lg text-sm">
+                                    <option value="source">Original</option> <option value="1080p">1080p</option> <option value="720p">720p</option> <option value="480p">480p</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="video-fps" class="block text-sm font-medium text-muted-foreground mb-1">FPS</label>
+                                <select id="video-fps" class="custom-select w-full p-2 rounded-lg text-sm">
+                                    <option value="15">15</option> <option value="24">24</option> <option value="30">30</option>
+                                </select>
+                            </div>`;
+                        el('#video-resolution').value = options.resolution;
+                        el('#video-fps').value = options.fps;
+                        break;
+                     case 'audio':
+                        container.innerHTML = `
+                            <div>
+                                <label for="audio-bitrate" class="block text-sm font-medium text-muted-foreground mb-1">Bitrate (MP3)</label>
+                                <select id="audio-bitrate" class="custom-select w-full p-2 rounded-lg text-sm">
+                                    <option value="320">320 kbps</option> <option value="192">192 kbps</option> <option value="128">128 kbps</option>
+                                </select>
+                            </div>`;
+                        el('#audio-bitrate').value = options.bitrate;
+                        break;
+                    case 'document':
+                        const isTxtOutput = el('#output-format').value === 'txt';
+                        container.innerHTML = `
+                             <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="doc-ocr" ${options.ocr ? 'checked' : ''} class="custom-input rounded">
+                                <label for="doc-ocr">Usar OCR (para imagens/scans)</label>
+                            </div>
+                            <div id="summarize-container" class="flex items-center space-x-2 border-t border-border pt-3 mt-3 ${isTxtOutput ? '' : 'hidden'}">
+                                <input type="checkbox" id="doc-summarize" class="custom-input rounded">
+                                <label for="doc-summarize">Resumir com Gemini AI</label>
+                            </div>`;
+                        break;
+                }
+            },
+            
+            showSummaryModal: (summary, fileName) => {
+                const modal = el('#summary-modal');
+                el('#summary-modal-title').innerHTML = `<i data-lucide="sparkles" class="w-5 h-5 text-purple-400"></i><span class="truncate">Resumo de: ${fileName}</span>`;
+                let html = summary.split('\n').map(p => p.trim()).filter(p => p).map(p => `<p>${p.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>')}</p>`).join('');
+                el('#summary-content').innerHTML = html;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                lucide.createIcons();
+            },
+            
+            hideSummaryModal: () => {
+                el('#summary-modal').classList.add('hidden');
+                el('#summary-modal').classList.remove('flex');
+            },
+        };
+
+        // --- Core Logic ---
+        async function summarizeTextWithGemini(text) {
+             ui.showToast('Enviando texto para a IA...', 'info');
+            const apiKey = ""; // API key is handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const truncatedText = text.length > 15000 ? text.substring(0, 15000) : text;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Por favor, resuma o seguinte texto em português de forma concisa e clara:\n\n---\n\n${truncatedText}` }] }],
+            };
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const result = await response.json();
+                const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!summary) throw new Error('Resposta da API inválida.');
+                ui.showToast('Resumo recebido com sucesso!', 'success');
+                return summary;
+            } catch (error) {
+                console.error('Falha ao chamar a API do Gemini:', error);
+                ui.showToast(`Erro na IA: ${error.message}`, 'error');
+                return null;
+            }
+        }
+        
+        async function handleSummarization(fileId, text) {
+            const card = el(`.file-card[data-id="${fileId}"]`);
+            if(!card) return;
+            const statusText = card.querySelector('.status-text');
+            const summarizingSpan = document.createElement('span');
+            summarizingSpan.className = 'text-blue-400 ml-1';
+            summarizingSpan.textContent = '(Resumindo...)';
+            statusText.appendChild(summarizingSpan);
+
+            const summary = await summarizeTextWithGemini(text);
+            summarizingSpan.remove();
+            
+            if (summary) {
+                const updatedFile = updateFileInQueue(fileId, { summaryText: summary });
+                ui.updateFileCardStatus(fileId, updatedFile); 
+            }
+        }
+
+        function getFileCategory(file) {
+            const type = file.type;
+            if (type.startsWith('image/')) return 'image';
+            if (type.startsWith('video/')) return 'video';
+            if (type.startsWith('audio/')) return 'audio';
+            if (type === 'application/pdf' || type.startsWith('text/')) return 'document';
+            const ext = file.name.split('.').pop().toLowerCase();
+            const extMap = { 'heic':'image', 'heif':'image', 'avif':'image', 'mov':'video', 'mkv':'video', 'avi':'video', 'webm':'video', 'm4v':'video', 'm4a':'audio', 'flac':'audio', 'ogg':'audio', 'md':'document' };
+            return extMap[ext] || 'document';
+        }
+
+        async function generateThumbnail(file) {
+            if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) return null;
+            return new Promise(resolve => {
+                const url = URL.createObjectURL(file);
+                if (file.type.startsWith('image/')) {
+                    resolve(url);
+                } else if (file.type.startsWith('video/')) {
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.currentTime = 1;
+                    video.onloadeddata = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL());
+                        URL.revokeObjectURL(url);
+                    };
+                    video.onerror = () => { resolve(null); URL.revokeObjectURL(url); }
+                }
+            });
+        }
+        
+        async function addFilesToQueue(files) {
+            ui.showToast(`Adicionando ${files.length} arquivo(s)...`, 'info');
+            for (const file of files) {
+                const category = getFileCategory(file);
+                if (category !== state.currentCategory) {
+                    ui.showToast(`Arquivo "${file.name}" é de uma categoria diferente.`, 'warning');
+                    continue;
+                }
+                const fileData = {
+                    id: `file_${Date.now()}_${Math.random()}`, file, name: file.name, size: file.size, type: file.type,
+                    category, status: 'queued', progress: 0,
+                    thumbnailUrl: await generateThumbnail(file)
+                };
+                if(category === 'image' && !file.type.includes('heic')) {
+                    try {
+                        const img = await createImageBitmap(file);
+                        fileData.originalWidth = img.width;
+                        fileData.originalHeight = img.height;
+                    } catch (e) { console.warn("Could not read image dimensions for file:", file.name); }
+                }
+                state.queue.push(fileData);
+            }
+            ui.renderQueue();
+            lucide.createIcons();
+            saveState();
+        }
+
+        function removeFileFromQueue(id) {
+            const fileData = state.queue.find(f => f.id === id);
+            if(fileData?.resultUrl) URL.revokeObjectURL(fileData.resultUrl);
+            state.queue = state.queue.filter(f => f.id !== id);
+            ui.renderQueue();
+            lucide.createIcons();
+            saveState();
+        }
+
+        function updateFileInQueue(id, updates) {
+            const fileIndex = state.queue.findIndex(f => f.id === id);
+            if (fileIndex > -1) {
+                state.queue[fileIndex] = { ...state.queue[fileIndex], ...updates };
+                ui.updateFileCardStatus(id, state.queue[fileIndex]);
+                return state.queue[fileIndex];
+            }
+            return null;
+        }
+
+        async function processQueue() {
+            const isParallel = el('#parallel-toggle').checked;
+            const limit = isParallel ? 2 : 1;
+            const filesToProcess = state.queue.filter(f => f.status === 'queued');
+            if (filesToProcess.length === 0) return;
+
+            ui.updateConvertAllButton();
+            
+            for (let i = 0; i < filesToProcess.length; i += limit) {
+                const chunk = filesToProcess.slice(i, i + limit);
+                const promises = chunk.map(fileData => convertAndHandleFile(fileData));
+                await Promise.all(promises);
+            }
+            ui.showToast("Todas as conversões foram concluídas.", "success");
+            ui.updateConvertAllButton();
+        }
+        
+        async function convertAndHandleFile(fileData) {
+            state.activeConversions++;
+            state.abortControllers[fileData.id] = new AbortController();
+            updateFileInQueue(fileData.id, { status: 'processing', progress: 0 });
+            ui.updateConvertAllButton();
+            
+            try {
+                const result = await convertFile(fileData);
+                if (state.abortControllers[fileData.id]?.signal.aborted) throw new Error("Canceled");
+                updateFileInQueue(fileData.id, { status: 'done', progress: 1, resultUrl: result.url, resultName: result.name });
+            } catch (error) {
+                const isCanceled = error.message === "Canceled";
+                updateFileInQueue(fileData.id, { status: isCanceled ? 'canceled' : 'error', error: isCanceled ? null : (error.message || 'Erro') });
+                if (!isCanceled) console.error("Conversion failed:", error);
+            } finally {
+                delete state.abortControllers[fileData.id];
+                state.activeConversions--;
+                ui.updateDownloadZipButton();
+                ui.updateConvertAllButton();
+                saveState();
+            }
+        }
+
+        async function convertFile(fileData) {
+            const targetFormat = el('#output-format').value;
+            const options = getOptionsFromUI(fileData.category);
+            const { file, name, id } = fileData;
+            const baseName = name.substring(0, name.lastIndexOf('.')) || name;
+            const signal = state.abortControllers[id]?.signal;
+            const onProgress = (p) => updateFileInQueue(id, { progress: p });
+
+            if (signal?.aborted) throw new Error("Canceled");
+
+            switch (fileData.category) {
+                case 'image':
+                    return await convertImage(file, { ...options, targetFormat, baseName, onProgress, signal });
+                case 'video':
+                    return await convertVideo(file, { ...options, targetFormat, baseName, onProgress, signal });
+                case 'audio':
+                    return await convertAudio(file, { ...options, targetFormat, baseName, onProgress, signal });
+                case 'document':
+                    return await convertDocument(file, { ...options, targetFormat, baseName, onProgress, signal, id });
+            }
+            throw new Error(`Categoria de conversão desconhecida: ${fileData.category}`);
+        }
+        
+        async function convertImage(file, opts) {
+            let blob = file.type.includes('heic') ? await heic2any({ blob: file, toType: `image/${opts.targetFormat}` }) : file;
+            const picaInstance = pica();
+            const offscreenCanvas = document.createElement('canvas');
+            const img = await createImageBitmap(blob);
+            
+            let targetWidth = opts.resize ? opts.width : img.width;
+            let targetHeight = opts.resize ? opts.height : img.height;
+            
+            offscreenCanvas.width = targetWidth;
+            offscreenCanvas.height = targetHeight;
+            
+            await picaInstance.resize(img, offscreenCanvas);
+            opts.onProgress(0.9);
+            const resultBlob = await picaInstance.toBlob(offscreenCanvas, `image/${opts.targetFormat}`, { quality: opts.quality / 100 });
+            return { url: URL.createObjectURL(resultBlob), name: `${opts.baseName}.${opts.targetFormat}` };
+        }
+        
+        async function convertVideo(file, opts) {
+            const video = document.createElement('video');
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            await new Promise(r => video.onloadedmetadata = r);
+
+            const resMap = { '1080p': 1080, '720p': 720, '480p': 480 };
+            const targetHeight = resMap[opts.resolution] || video.videoHeight;
+            const scale = targetHeight / video.videoHeight;
+            const targetWidth = Math.round(video.videoWidth * scale);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+
+            const totalFrames = video.duration * opts.fps;
+            let writer;
+
+            if (opts.targetFormat === 'webm') {
+                if (typeof WebMWriter === 'undefined') {
+                    throw new Error("Biblioteca WebMWriter não carregada.");
+                }
+                writer = new WebMWriter({ frameRate: opts.fps, quality: 0.95 });
+            } else if (opts.targetFormat === 'gif') {
+                writer = new GIF({ workers: 2, quality: 10, width: targetWidth, height: targetHeight });
+                writer.on('finished', (blob) => {});
+            }
+
+            for (let i = 0; i < totalFrames; i++) {
+                if (opts.signal?.aborted) throw new Error("Canceled");
+                video.currentTime = i / opts.fps;
+                await new Promise(r => video.onseeked = r);
+                ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+                if (opts.targetFormat === 'webm') {
+                    writer.addFrame(canvas);
+                } else {
+                    writer.addFrame(ctx, { copy: true, delay: 1000 / opts.fps });
+                }
+                opts.onProgress(i / totalFrames);
+            }
+            
+            URL.revokeObjectURL(url);
+            
+            let resultBlob;
+            if (opts.targetFormat === 'webm') {
+                resultBlob = await writer.complete();
+            } else {
+                 resultBlob = await new Promise(resolve => {
+                    writer.on('finished', (blob) => resolve(blob));
+                    writer.render();
+                });
+            }
+
+            return { url: URL.createObjectURL(resultBlob), name: `${opts.baseName}.${opts.targetFormat}` };
+        }
+
+        async function convertAudio(file, opts) {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const arrayBuffer = await file.arrayBuffer();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            const pcmData = audioBuffer.getChannelData(0);
+            opts.onProgress(0.5);
+
+            if (opts.targetFormat === 'mp3') {
+                const mp3encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, opts.bitrate);
+                const mp3Data = [];
+                const sampleBlockSize = 1152;
+                for (let i = 0; i < pcmData.length; i += sampleBlockSize) {
+                    const sampleChunk = pcmData.subarray(i, i + sampleBlockSize);
+                    const mp3buf = mp3encoder.encodeBuffer(sampleChunk.map(v => v * 32767)); 
+                    if (mp3buf.length > 0) mp3Data.push(mp3buf);
+                }
+                const flushed = mp3encoder.flush();
+                if (flushed.length > 0) mp3Data.push(flushed);
+                
+                const resultBlob = new Blob(mp3Data.map(d => new Uint8Array(d)), { type: 'audio/mpeg' });
+                return { url: URL.createObjectURL(resultBlob), name: `${opts.baseName}.mp3` };
+            } else if (opts.targetFormat === 'wav') {
+                 const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+                 const view = new DataView(buffer);
+                 const writeString = (offset, string) => { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); };
+
+                 writeString(0, 'RIFF'); view.setUint32(4, 36 + pcmData.length * 2, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
+                 view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+                 view.setUint32(24, audioBuffer.sampleRate, true); view.setUint32(28, audioBuffer.sampleRate * 2, true);
+                 view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeString(36, 'data');
+                 view.setUint32(40, pcmData.length * 2, true);
+                 
+                 for (let i = 0; i < pcmData.length; i++) {
+                    let s = Math.max(-1, Math.min(1, pcmData[i]));
+                    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                 }
+                const resultBlob = new Blob([view], { type: 'audio/wav' });
+                return { url: URL.createObjectURL(resultBlob), name: `${opts.baseName}.wav` };
+            }
+        }
+        
+        async function convertDocument(file, opts) {
+            if (opts.targetFormat === 'txt') {
+                let extractedText = '';
+                if (file.type === 'application/pdf') {
+                    const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        extractedText += textContent.items.map(item => item.str).join(' ');
+                        extractedText += '\n\n';
+                        opts.onProgress(i / pdf.numPages);
+                    }
+                } else if (file.type.startsWith('text/')) {
+                    extractedText = await file.text();
+                } else if (file.type.startsWith('image/')) {
+                     if (opts.ocr) {
+                        const worker = await Tesseract.createWorker('por', 1, { logger: m => opts.onProgress(m.progress) });
+                        const ret = await worker.recognize(file);
+                        extractedText = ret.data.text;
+                        await worker.terminate();
+                    } else { throw new Error('Para extrair texto de imagens, ative a opção OCR.'); }
+                }
+                
+                if (opts.summarize && extractedText.trim()) {
+                    handleSummarization(opts.id, extractedText);
+                }
+
+                const resultBlob = new Blob([extractedText], { type: 'text/plain' });
+                return { url: URL.createObjectURL(resultBlob), name: `${opts.baseName}.txt` };
+            } else if (opts.targetFormat === 'pdf') { // Image to PDF
+                 const pdfDoc = await PDFDocument.create();
+                 const imageBytes = await file.arrayBuffer();
+                 const image = file.type === 'image/jpeg' ? await pdfDoc.embedJpg(imageBytes) : await pdfDoc.embedPng(imageBytes);
+                 const page = pdfDoc.addPage([image.width, image.height]);
+                 page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+                 const pdfBytes = await pdfDoc.save();
+                 const resultBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                 return { url: URL.createObjectURL(resultBlob), name: `${opts.baseName}.pdf` };
+            } else if (opts.targetFormat === 'images-zip') { // PDF to images
+                const zip = new JSZip();
+                const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width; canvas.height = viewport.height;
+                    const renderContext = { canvasContext: canvas.getContext('2d'), viewport: viewport };
+                    await page.render(renderContext).promise;
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    zip.file(`${opts.baseName}_page_${i}.png`, blob);
+                    opts.onProgress(i/pdf.numPages);
+                }
+                const zipBlob = await zip.generateAsync({type: "blob"});
+                return { url: URL.createObjectURL(zipBlob), name: `${opts.baseName}_pages.zip` };
+            }
+             throw new Error(`Conversão de documento para ${opts.targetFormat} não implementada.`);
+        }
+
+        function getOptionsFromUI(category) {
+            const options = {};
+            switch(category) {
+                case 'image':
+                    options.quality = parseInt(el('#image-quality')?.value || 85);
+                    options.resize = el('#image-resize')?.checked;
+                    options.width = parseInt(el('#image-width')?.value || 1920);
+                    options.height = parseInt(el('#image-height')?.value || 1080);
+                    break;
+                case 'video':
+                    options.resolution = el('#video-resolution')?.value || '720p';
+                    options.fps = parseInt(el('#video-fps')?.value || 24);
+                    break;
+                case 'audio':
+                    options.bitrate = parseInt(el('#audio-bitrate')?.value || 192);
+                    break;
+                case 'document':
+                    options.ocr = el('#doc-ocr')?.checked;
+                    options.summarize = el('#doc-summarize')?.checked;
+                    break;
+            }
+            return options;
+        }
+
+        // --- Event Handlers ---
+        function setupEventListeners() {
+            el('#theme-toggle').addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                saveState();
+            });
+            el('#clear-queue-btn').addEventListener('click', () => { state.queue = []; ui.renderQueue(); saveState(); });
+            el('#download-zip-btn').addEventListener('click', async () => {
+                const doneFiles = state.queue.filter(f => f.status === 'done');
+                if (doneFiles.length === 0) return ui.showToast('Nenhum arquivo convertido para baixar.', 'warning');
+                ui.showToast('Preparando o arquivo ZIP...', 'info');
+                const zip = new JSZip();
+                for (const fileData of doneFiles) {
+                    const response = await fetch(fileData.resultUrl);
+                    zip.file(`${fileData.category}/${fileData.resultName}`, await response.blob());
+                }
+                saveAs(await zip.generateAsync({ type: 'blob' }), `converted-files-${dayjs().format('YYYY-MM-DD')}.zip`);
+                ui.showToast('Download do ZIP iniciado!', 'success');
+            });
+            el('#convert-all-btn').addEventListener('click', processQueue);
+            const dropzone = el('#dropzone');
+            dropzone.addEventListener('click', () => el('#file-input').click());
+            dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dropzone-active'); });
+            dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dropzone-active'));
+            dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dropzone-active'); addFilesToQueue(e.dataTransfer.files); });
+            el('#file-input').addEventListener('change', (e) => addFilesToQueue(e.target.files));
+            el('#category-nav').addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (btn?.dataset.category) ui.updateCategorySelection(btn.dataset.category);
+            });
+            el('#file-queue').addEventListener('click', (e) => {
+                const card = e.target.closest('.file-card');
+                if (!card) return;
+                if (e.target.closest('.remove-btn')) removeFileFromQueue(card.dataset.id);
+                if (e.target.closest('.cancel-btn')) state.abortControllers[card.dataset.id]?.abort();
+                if (e.target.closest('.summary-btn')) {
+                    const fileData = state.queue.find(f => f.id === card.dataset.id);
+                    if(fileData?.summaryText) ui.showSummaryModal(fileData.summaryText, fileData.name);
+                }
+            });
+            el('#settings-panel').addEventListener('change', e => {
+                if (e.target.id === 'preset-select' && e.target.value) {
+                    const preset = state.presets[state.currentCategory][e.target.value];
+                    el('#output-format').value = preset.options.format;
+                    ui.renderDynamicOptions(state.currentCategory, preset.options);
+                }
+                if (e.target.id === 'output-format' && state.currentCategory === 'document') ui.renderDynamicOptions('document');
+            });
+            el('#dynamic-options').addEventListener('input', e => { if(e.target.id === 'image-quality') el('#quality-label').textContent = e.target.value; });
+            el('#dynamic-options').addEventListener('change', e => { if(e.target.id === 'image-resize') el('#resize-options').classList.toggle('hidden', !e.target.checked); });
+            el('#close-summary-modal').addEventListener('click', ui.hideSummaryModal);
+            el('#summary-modal').addEventListener('click', (e) => { if (e.target.id === 'summary-modal') ui.hideSummaryModal(); });
+        }
+
+        // --- Persistence ---
+        function saveState() {
+            const stateToSave = { ...state, queue: [], abortControllers: {}, activeConversions: 0 };
+            localStorage.setItem('converterState', JSON.stringify(stateToSave));
+        }
+        function loadState() {
+            const savedState = localStorage.getItem('converterState');
+            if (savedState) state = { ...state, ...JSON.parse(savedState), queue: [] };
+        }
+        
+        // --- Initialization ---
+        function init() {
+            loadState();
+            document.documentElement.classList.toggle('dark', state.theme === 'dark');
+            ui.updateCategorySelection(state.currentCategory);
+            ui.renderQueue();
+            setupEventListeners();
+            lucide.createIcons();
+            ui.showToast('Bem-vindo ao Conversor Universal!', 'info');
+        }
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+
